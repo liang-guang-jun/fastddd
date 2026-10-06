@@ -1,0 +1,113 @@
+{
+  // ==========================================================================
+  // metadict - check tasks. Every command runs through `uv`, so it always uses
+  // .venv and the versions pinned in uv.lock, both owned by the pyproject.toml
+  // at the workspace root (server/ is the importable package, not the project).
+  // ==========================================================================
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "check: ruff",
+      "detail": "Ruff lint and format check of the Python project",
+      "type": "shell",
+      "command": "uv run ruff check --output-format=concise . && uv run ruff format --check .",
+      "problemMatcher": [
+        {
+          "owner": "ruff",
+          "source": "ruff",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          // src/app/__init__.py:1:5: D103 Missing docstring in public function
+          "pattern": {
+            "regexp": "^([^:]+):(\\d+):(\\d+): ([A-Z]+\\d+) (.*)$",
+            "file": 1,
+            "line": 2,
+            "column": 3,
+            "code": 4,
+            "message": 5,
+            "severity": "error"
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "group": {
+        "kind": "test"
+      }
+    },
+    {
+      "label": "check: mypy",
+      "detail": "Mypy type check of the Python project",
+      "type": "shell",
+      "command": "uv run mypy .",
+      "problemMatcher": [
+        {
+          "owner": "mypy",
+          "source": "mypy",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          // src/app/__init__.py:1: error: Message  [error-code]
+          "pattern": {
+            "regexp": "^([^:]+):(\\d+): (error|warning): (.*?)(?:  \\[[^\\]]+\\])?$",
+            "file": 1,
+            "line": 2,
+            "severity": 3,
+            "message": 4
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "group": {
+        "kind": "test"
+      }
+    },
+    {
+      "label": "check: pytest",
+      "detail": "Test suite of the Python project with coverage",
+      "type": "shell",
+      "command": "uv run pytest",
+      "problemMatcher": [
+        {
+          "owner": "pytest",
+          "source": "pytest",
+          "fileLocation": ["relative", "${workspaceFolder}"],
+          // tests/test_api.py:42: AssertionError
+          "pattern": {
+            "regexp": "^([^:]+):(\\d+): ((?!in ).*)$",
+            "file": 1,
+            "line": 2,
+            "severity": "error",
+            "message": 3
+          }
+        }
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      },
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "check: all",
+      "detail": "Ruff, mypy and pytest",
+      // dependsOn matches task *labels* (there is no task "id" in tasks.json).
+      // Parallel on purpose: a failing check never hides the other two.
+      "dependsOn": ["check: ruff", "check: mypy", "check: pytest"],
+      "dependsOrder": "parallel",
+      "problemMatcher": [],
+      // Not the default test task: `check: pytest` is.
+      "group": {
+        "kind": "test"
+      }
+    }
+  ]
+}

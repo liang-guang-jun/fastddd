@@ -1,0 +1,103 @@
+{
+  // ==========================================================================
+  // metadict - workspace settings
+  //   client/  React 19 + Vite + TypeScript
+  //   server/  the importable Python 3.13 + FastAPI package (project config and
+  //            tooling live in the workspace-root pyproject.toml)
+  // ==========================================================================
+
+  // --- Files ----------------------------------------------------------------
+  // One line ending everywhere (LF), no stray trailing whitespace.
+  "files.eol": "\n",
+  "files.encoding": "utf8",
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+
+  // --- Editor ---------------------------------------------------------------
+  // Save formats with the language's own tool; see the [language] blocks.
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": false,
+  "editor.detectIndentation": false,
+  "editor.insertSpaces": true,
+  "editor.tabSize": 2,
+  // Python is 88 wide (Ruff), TypeScript 100 (client/.prettierrc.json).
+  "editor.rulers": [88, 100],
+
+  // Generated trees are not part of the project.
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.venv": true,
+    "**/__pycache__": true,
+    "**/.mypy_cache": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true,
+    "**/uv.lock": true,
+    "**/pnpm-lock.yaml": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.venv/**": true,
+    "**/__pycache__/**": true,
+    "**/.git/objects/**": true
+  },
+
+  // --- Formatters -----------------------------------------------------------
+  // Python: Ruff formats, sorts imports and applies its own lint fixes.
+  // It reads the workspace-root pyproject.toml ([tool.ruff*]).
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      // Ruff fixAll also applies I001 import sorting; keeping a second
+      // organizer here can reorder the block again during the same save.
+      "source.organizeImports.ruff": "never"
+    }
+  },
+  // TypeScript/JSX: Prettier, configured by client/.prettierrc.json.
+  "[typescript][typescriptreact][javascript][javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json][jsonc][css][scss][html]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.wordWrap": "on"
+  },
+
+  // --- Python (root pyproject.toml) -----------------------------------------
+  // The virtualenv is `.venv` at the workspace root, created by `uv sync`; the
+  // linters, the type checker and pytest are installed in it.
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  // `server` is an ordinary top-level package, so the workspace root is already
+  // the import root (`import server.app...`) and needs no extraPaths.
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [],
+
+  // Both extensions use the binaries from the selected environment.
+  "ruff.importStrategy": "fromEnvironment",
+  "mypy-type-checker.importStrategy": "fromEnvironment",
+  // Type check from the folder that owns the pyproject.toml mypy should read.
+  "mypy-type-checker.cwd": "${nearestConfig}"
+
+  // --- Pylance / Pyright ----------------------------------------------------
+  // mypy is this project's type checker (pyproject.toml [tool.mypy]), so Pylance
+  // is used for IntelliSense only: its type-checking rule set is off, and so are
+  // the four warnings that "off" would still report. Nothing from Pylance
+  // reaches the Problems panel; Ruff and mypy are the only sources.
+  //
+  // These values live in the workspace-root pyproject.toml under [tool.pyright]
+  // instead of here. A pyproject.toml with [tool.pyright] outranks settings.json,
+  // so python.analysis.typeCheckingMode and diagnosticSeverityOverrides set here
+  // would be ignored (and flagged with a squiggle): one place for the config, and
+  // it is also the block the pyright CLI reads.
+}

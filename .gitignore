@@ -1,0 +1,54 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.idea
+
+# Virtual environments
+.venv
+
+
+# Configurations
+.env*
+
+
+# Cache Files
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.cache/
+.coverage
+.continue
+
+
+## SQLite Files
+*.sqlite
+*.db
+*.db-shm
+*.db-wal
+
+# Frontend Dependencies
+node_modules
+dist-ssr
+*.local
+.pnpm-store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
