@@ -1,0 +1,3 @@
+# The SQLite file the example writes by default lives here, and it is not source.
+*
+!.gitignore

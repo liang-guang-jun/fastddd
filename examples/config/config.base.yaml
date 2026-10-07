@@ -1,0 +1,44 @@
+# The base layer of this service's configuration.
+#
+# A profile named "base" reads this file. A deployment adds another profile --
+# `config.local.yaml`, say -- and declares only what it changes, because the
+# resolver merges by priority instead of replacing.
+#
+# Section names are the kernel's: `api` and `logging` come from `AppConfig`, and
+# `database` is this service's own addition to it.
+
+api:
+  # What a process manager reads to start the service. The application is built
+  # by a factory, so the entry point is the pair below.
+  app: examples.composition.bootstrap
+  factory: create_app
+  prefix: /api/v1
+  host: 127.0.0.1
+  port: 8000
+  debug: false
+  cors:
+    allow_origins: []
+
+logging:
+  level: INFO
+  json_output: false
+  colors: true
+  silenced_loggers:
+    - sqlalchemy.engine
+
+database:
+  provider: sqlite
+  driver: aiosqlite
+  auth:
+    # The file is relative to the working directory the service runs in.
+    database: examples/var/example.sqlite3
+    # SQLite opens a file, so there is no credential to give. The fields exist
+    # because the section has one shape for every provider, and the adapter
+    # simply ignores them here.
+    type: password
+    username: unused
+    password: unused
+  echo: false
+  options:
+    # Wait rather than fail when another writer holds the file.
+    busy_timeout_ms: 5000

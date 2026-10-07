@@ -1,0 +1,33 @@
+# PostgreSQL for the tests marked `integration`.
+#
+# The default run is hermetic -- in-memory SQLite -- and the integration tests
+# skip themselves when nothing answers at the DSN below. Start this to run them
+# against the deployment target as well:
+#
+#   docker compose -f tests/docker-compose.yml up -d --wait
+#   uv run pytest -m integration          # or just `uv run pytest`
+#   docker compose -f tests/docker-compose.yml down -v
+#
+# The host port is deliberately not 5432, so a PostgreSQL already running on this
+# machine is left alone. Point FASTDDD_TEST_POSTGRES_DSN somewhere else to run the
+# same tests against another server.
+name: fastddd-tests
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: fastddd
+      POSTGRES_PASSWORD: fastddd
+      POSTGRES_DB: fastddd_test
+    ports:
+      - "127.0.0.1:55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fastddd -d fastddd_test"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+    tmpfs:
+      # The tests write and truncate constantly and should leave nothing behind,
+      # so the data directory lives in memory rather than in a volume.
+      - /var/lib/postgresql/data

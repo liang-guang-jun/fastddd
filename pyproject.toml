@@ -1,5 +1,5 @@
 # =============================================================================
-#  src - project metadata and tooling.
+#  fastddd - project metadata and tooling.
 #
 # This single file drives the whole Python side of the repository:
 #   [project] / [dependency-groups] -> uv
@@ -14,22 +14,22 @@
 # Project metadata
 # -----------------------------------------------------------------------------
 [project]
-name = "src"
+name = "fastddd"
 version = "0.1.0"
 description = "backend service."
 readme = "README.md"
 authors = [{ name = "GUANGJUN LIANG", email = "guangjun_l@icloud.com" }]
 # Keep this in sync with [tool.ruff].target-version and [tool.mypy].python_version.
 requires-python = ">=3.13"
-# Runtime dependencies: everything `src` may import while the service runs.
+# Runtime dependencies: everything `fastddd` may import while the service runs.
+# Database *drivers* are deliberately absent -- see the extras below.
 dependencies = [
   "alembic>=1.20.0",
-  "asyncpg>=0.30.0",
   "cryptography>=44.0.0",
   "dependency-injector>=4.49.1",
   "fastapi>=0.141.1",
   "pwdlib[argon2]>=0.3.1",
-  "pydantic-settings>=2.15.0",
+  "pydantic>=2.13.5",
   "pyjwt>=2.14.0",
   "python-multipart>=0.0.20",
   "pyyaml>=6.0.3",
@@ -39,8 +39,21 @@ dependencies = [
   "uvicorn[standard]>=0.53.0",
 ]
 
+# Optional extras: one per database backend, so a deployment installs only the
+# driver it actually connects with -- `uv sync --extra postgres`, or a
+# `fastddd[postgres]` install. SQLAlchemy and Alembic stay runtime: they are the
+# engine, not a driver, and `create_database_backend` imports the driver lazily,
+# only when a connection is opened.
+#
+# Lakebase speaks PostgreSQL through asyncpg, so its extra repeats that driver
+# rather than referring to this project by name.
+[project.optional-dependencies]
+sqlite = ["aiosqlite>=0.22.1"]
+postgres = ["asyncpg>=0.30.0"]
+databricks = ["asyncpg>=0.30.0", "databricks-sdk>=0.147.0"]
+
 # [project.scripts]
-# fastddd = "src.bootstrap.cli.main:app"
+# fastddd = "examples.cli:app"
 
 # -----------------------------------------------------------------------------
 # Build
@@ -50,16 +63,20 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-# `src` is the top-level import package.
-packages = ["src"]
+# `fastddd` is the import package: the repository root is also the import root.
+packages = ["fastddd"]
 
 # -----------------------------------------------------------------------------
 # Dependency groups -- tooling that is never part of the published package
 # -----------------------------------------------------------------------------
 [dependency-groups]
-# Installed by a plain `uv sync` / used by `uv run <tool>`.
+# Installed by a plain `uv sync` / used by `uv run <tool>`. Development runs
+# PostgreSQL, so that driver lives here rather than behind an extra; SQLite is a
+# deployment choice and stays in the `sqlite` extra -- except here, where it is
+# the only database the test suite can open hermetically (in memory, no server).
 dev = [
   "aiosqlite>=0.22.1",
+  "asyncpg>=0.30.0",
   "httpx2>=0.28.0",
   "mypy>=2.3.1",
   "pathspec>=1.0.0",
@@ -83,8 +100,9 @@ docs = ["mkdocs>=1.6.1", "mkdocs-material>=9.7.7"]
 line-length = 88
 # Keep in sync with requires-python.
 target-version = "py313"
-# Declare the source root so Ruff resolves first-party imports correctly.
-src = ["src"]
+# Declare the source roots so Ruff resolves first-party imports correctly: the
+# package sits at the repository root, next to `tests/` and `examples/`.
+src = ["."]
 
 # Directories that never contain hand-written code.
 exclude = [
@@ -101,8 +119,11 @@ exclude = [
   "__pycache__",
   "build",
   "dist",
-  # Alembic migrations are generated and edited outside the lint contract.
-  "src/migrations",
+  # Alembic migrations are generated and edited outside the lint contract, so
+  # any ``migrations`` tree is exempt -- the same boundary mypy draws with its
+  # ``(^|/)migrations/`` exclude. A migration command may be pointed at any
+  # directory, and a tree that was generated must never fail the lint gate.
+  "**/migrations",
 ]
 
 [tool.ruff.lint]
@@ -137,8 +158,17 @@ convention = "google"
 "tests/**" = ["D101", "D102", "D103", "D104", "D107"]
 # IAM is being introduced incrementally; its public API is covered by strict
 # typing/tests while documentation is completed alongside each use-case slice.
-"src/iam/**" = ["F401", "F403", "F405", "I001", "B009", "E701", "E702", "UP035"]
-"src/catalog/**" = [
+"fastddd/iam/**" = [
+  "F401",
+  "F403",
+  "F405",
+  "I001",
+  "B009",
+  "E701",
+  "E702",
+  "UP035",
+]
+"fastddd/catalog/**" = [
   "F401",
   "F403",
   "F405",
@@ -150,13 +180,13 @@ convention = "google"
   "RUF022",
 ]
 # Alembic generates these files itself (irregular module names, unused imports
-# in empty revisions, no docstrings). `src/migrations` is excluded outright
+# in empty revisions, no docstrings). `fastddd/migrations` is excluded outright
 # above; this pattern covers generated trees placed anywhere else.
 "**/alembic/versions/**" = ["N999", "F401"]
 
-# Make isort treat `src` as first-party.
+# Make isort treat `fastddd` as first-party.
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["fastddd"]
 
 [tool.ruff.format]
 # Double quotes and space indentation, i.e. the Black-compatible defaults.
@@ -201,7 +231,7 @@ warn_required_dynamic_aliases = true
 # -----------------------------------------------------------------------------
 [tool.pyright]
 # mypy (see above) is this project's type checker, so the editor's language
-# src runs without type checking. These four rules are the ones that stay
+# server runs without type checking. These four rules are the ones that stay
 # enabled even in "off" mode, and they are the warnings this project does not
 # want.
 #
@@ -235,8 +265,9 @@ addopts = [
   "--tb=short",                # short tracebacks
   "--strict-markers",          # a mistyped marker is an error, not a warning
   "--strict-config",           # same for a mistyped option in this file
+  "--import-mode=importlib",   # keep test module names unique across test trees
   "-ra",                       # summary of every non-passing result
-  "--cov=src",                 # coverage of the package (pytest-cov)
+  "--cov=fastddd",             # coverage of the package (pytest-cov)
   "--cov-report=term-missing", # show the lines that are not covered
 ]
 markers = [
@@ -250,8 +281,13 @@ filterwarnings = ["error", "ignore::DeprecationWarning"]
 # coverage.py (driven by pytest-cov)
 # -----------------------------------------------------------------------------
 [tool.coverage.run]
-source = ["src"]
+source = ["fastddd"]
 branch = true
+# SQLAlchemy's async engine runs the DBAPI work inside greenlets, so the tracer
+# has to follow those switches; without this, work that happens while a
+# connection is being set up -- the SQLite PRAGMA hook, for one -- runs without
+# being counted.
+concurrency = ["thread", "greenlet"]
 omit = ["*/tests/*", "*/__main__.py"]
 
 [tool.coverage.report]
